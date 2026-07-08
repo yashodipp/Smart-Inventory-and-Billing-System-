@@ -6,6 +6,15 @@ import psycopg2
 from psycopg2 import OperationalError
 
 
+def get_streamlit_secret(key):
+    try:
+        import streamlit as st
+
+        return st.secrets.get(key)
+    except Exception:
+        return None
+
+
 def load_env_file(path=".env"):
     if not os.path.exists(path):
         return
@@ -25,7 +34,12 @@ def load_env_file(path=".env"):
 def connection():
     load_env_file()
 
-    database_url = os.getenv("DATABASE_URL") or os.getenv("NEON_DATABASE_URL")
+    database_url = (
+        os.getenv("DATABASE_URL")
+        or os.getenv("NEON_DATABASE_URL")
+        or get_streamlit_secret("DATABASE_URL")
+        or get_streamlit_secret("NEON_DATABASE_URL")
+    )
     if database_url:
         try:
             con = psycopg2.connect(database_url)
