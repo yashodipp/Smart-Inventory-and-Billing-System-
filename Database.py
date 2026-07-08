@@ -6,11 +6,16 @@ import psycopg2
 from psycopg2 import OperationalError
 
 
-def get_streamlit_secret(key):
+def get_streamlit_secret(*keys):
     try:
         import streamlit as st
 
-        return st.secrets.get(key)
+        value = st.secrets
+        for key in keys:
+            value = value.get(key)
+            if value is None:
+                return None
+        return value
     except Exception:
         return None
 
@@ -39,6 +44,10 @@ def connection():
         or os.getenv("NEON_DATABASE_URL")
         or get_streamlit_secret("DATABASE_URL")
         or get_streamlit_secret("NEON_DATABASE_URL")
+        or get_streamlit_secret("database", "url")
+        or get_streamlit_secret("postgres", "url")
+        or get_streamlit_secret("postgresql", "url")
+        or get_streamlit_secret("connections", "postgresql", "url")
     )
     if database_url:
         try:
