@@ -6,24 +6,6 @@ import psycopg2
 from psycopg2 import OperationalError
 
 
-def running_on_streamlit_cloud():
-    return os.path.exists("/mount/src") or bool(os.getenv("STREAMLIT_CLOUD"))
-
-
-def get_streamlit_secret(*keys):
-    try:
-        import streamlit as st
-
-        value = st.secrets
-        for key in keys:
-            value = value.get(key)
-            if value is None:
-                return None
-        return value
-    except Exception:
-        return None
-
-
 def load_env_file(path=".env"):
     if not os.path.exists(path):
         return
@@ -43,44 +25,6 @@ def load_env_file(path=".env"):
 def connection():
     load_env_file()
 
-    database_url = (
-        os.getenv("DATABASE_URL")
-        or os.getenv("NEON_DATABASE_URL")
-        or os.getenv("POSTGRES_URL")
-        or os.getenv("POSTGRESQL_URL")
-        or os.getenv("NEON_URL")
-        or get_streamlit_secret("DATABASE_URL")
-        or get_streamlit_secret("NEON_DATABASE_URL")
-        or get_streamlit_secret("database_url")
-        or get_streamlit_secret("neon_database_url")
-        or get_streamlit_secret("POSTGRES_URL")
-        or get_streamlit_secret("POSTGRESQL_URL")
-        or get_streamlit_secret("NEON_URL")
-        or get_streamlit_secret("database", "url")
-        or get_streamlit_secret("postgres", "url")
-        or get_streamlit_secret("postgresql", "url")
-        or get_streamlit_secret("connections", "postgresql", "url")
-    )
-    if database_url:
-        try:
-            con = psycopg2.connect(database_url)
-        except OperationalError as error:
-            raise OperationalError(
-                "Could not connect to PostgreSQL using DATABASE_URL or "
-                "NEON_DATABASE_URL. Check your Neon connection string and make "
-                "sure it includes sslmode=require or sslmode=verify-full."
-            ) from error
-
-        con.autocommit = True
-        print("Connection successful: Neon/PostgreSQL database")
-        return con
-
-    if running_on_streamlit_cloud():
-        raise RuntimeError(
-            "DATABASE_URL secret is missing in Streamlit Cloud. Add your Neon "
-            "connection string in App -> Settings -> Secrets, then reboot the app."
-        )
-
     config = {
         "host": os.getenv("PGHOST", "localhost"),
         "database": os.getenv("PGDATABASE", "ecommerce"),
@@ -97,8 +41,8 @@ def connection():
     except OperationalError as error:
         raise OperationalError(
             "Could not connect to PostgreSQL. Check that the database exists "
-            "and set DATABASE_URL for Neon, or PGDATABASE, PGUSER, PGPASSWORD, "
-            "PGHOST, or PGPORT if your local setup uses different credentials."
+            "and set PGDATABASE, PGUSER, PGPASSWORD, PGHOST, or PGPORT if your "
+            "local setup uses different credentials."
         ) from error
 
     con.autocommit = True
