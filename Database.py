@@ -6,6 +6,10 @@ import psycopg2
 from psycopg2 import OperationalError
 
 
+def running_on_streamlit_cloud():
+    return os.path.exists("/mount/src") or bool(os.getenv("STREAMLIT_CLOUD"))
+
+
 def get_streamlit_secret(*keys):
     try:
         import streamlit as st
@@ -42,8 +46,16 @@ def connection():
     database_url = (
         os.getenv("DATABASE_URL")
         or os.getenv("NEON_DATABASE_URL")
+        or os.getenv("POSTGRES_URL")
+        or os.getenv("POSTGRESQL_URL")
+        or os.getenv("NEON_URL")
         or get_streamlit_secret("DATABASE_URL")
         or get_streamlit_secret("NEON_DATABASE_URL")
+        or get_streamlit_secret("database_url")
+        or get_streamlit_secret("neon_database_url")
+        or get_streamlit_secret("POSTGRES_URL")
+        or get_streamlit_secret("POSTGRESQL_URL")
+        or get_streamlit_secret("NEON_URL")
         or get_streamlit_secret("database", "url")
         or get_streamlit_secret("postgres", "url")
         or get_streamlit_secret("postgresql", "url")
@@ -62,6 +74,12 @@ def connection():
         con.autocommit = True
         print("Connection successful: Neon/PostgreSQL database")
         return con
+
+    if running_on_streamlit_cloud():
+        raise RuntimeError(
+            "DATABASE_URL secret is missing in Streamlit Cloud. Add your Neon "
+            "connection string in App -> Settings -> Secrets, then reboot the app."
+        )
 
     config = {
         "host": os.getenv("PGHOST", "localhost"),
